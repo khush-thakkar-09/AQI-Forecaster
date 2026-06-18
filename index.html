@@ -1,0 +1,646 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Kolkata AQI Real-Time Forecaster</title>
+    <!-- Google Fonts: Inter & Outfit -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@400;600;800&display=swap"
+        rel="stylesheet">
+    <style>
+        :root {
+            --bg-gradient: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+            --card-bg: rgba(30, 41, 59, 0.45);
+            --card-border: rgba(255, 255, 255, 0.08);
+            --text-primary: #f8fafc;
+            --text-secondary: #94a3b8;
+
+            /* AQI Color system */
+            --color-good: #10b981;
+            --color-moderate: #f59e0b;
+            --color-poor: #ef4444;
+            --aqi-glow: var(--color-good);
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background: var(--bg-gradient);
+            color: var(--text-primary);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 2rem 1rem;
+            overflow-x: hidden;
+        }
+
+        header {
+            text-align: center;
+            margin-bottom: 2.5rem;
+            animation: fadeInDown 0.8s ease-out;
+        }
+
+        h1 {
+            font-family: 'Outfit', sans-serif;
+            font-size: 2.5rem;
+            font-weight: 800;
+            background: linear-gradient(to right, #60a5fa, #38bdf8);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin-bottom: 0.5rem;
+        }
+
+        .subtitle {
+            font-size: 1rem;
+            color: var(--text-secondary);
+            font-weight: 400;
+            letter-spacing: 0.5px;
+        }
+
+        .dashboard-container {
+            width: 100%;
+            max-width: 1000px;
+            display: flex;
+            flex-direction: column;
+            gap: 2rem;
+            animation: fadeInUp 0.8s ease-out;
+        }
+
+        /* Hero circular gauge section */
+        .hero-section {
+            background: var(--card-bg);
+            border: 1px solid var(--card-border);
+            backdrop-filter: blur(20px);
+            border-radius: 24px;
+            padding: 3rem 2rem;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .hero-section::before {
+            content: '';
+            position: absolute;
+            width: 300px;
+            height: 300px;
+            background: radial-gradient(circle, var(--aqi-glow) 0%, transparent 70%);
+            opacity: 0.15;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            pointer-events: none;
+            transition: background 0.5s ease;
+        }
+
+        .gauge-outer {
+            width: 220px;
+            height: 220px;
+            border-radius: 50%;
+            background: conic-gradient(var(--aqi-glow) var(--aqi-percent, 0%), rgba(255, 255, 255, 0.05) var(--aqi-percent, 0%));
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+            margin-bottom: 1.5rem;
+            box-shadow: 0 0 30px rgba(0, 0, 0, 0.2);
+            transition: background 0.5s ease;
+        }
+
+        .gauge-inner {
+            width: 196px;
+            height: 196px;
+            border-radius: 50%;
+            background: #111b2e;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            z-index: 2;
+        }
+
+        .gauge-value {
+            font-family: 'Outfit', sans-serif;
+            font-size: 3.5rem;
+            font-weight: 800;
+            color: var(--text-primary);
+            line-height: 1;
+        }
+
+        .gauge-unit {
+            font-size: 0.85rem;
+            color: var(--text-secondary);
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-top: 0.25rem;
+        }
+
+        .aqi-label {
+            font-family: 'Outfit', sans-serif;
+            font-size: 1.75rem;
+            font-weight: 600;
+            margin-bottom: 0.5rem;
+            color: var(--aqi-glow);
+            transition: color 0.5s ease;
+        }
+
+        .health-advice {
+            font-size: 0.95rem;
+            color: var(--text-secondary);
+            max-width: 500px;
+            line-height: 1.5;
+            margin-bottom: 1.5rem;
+        }
+
+        .update-badge {
+            font-size: 0.75rem;
+            color: var(--text-secondary);
+            background: rgba(255, 255, 255, 0.04);
+            padding: 0.4rem 0.8rem;
+            border-radius: 30px;
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .pulse-dot {
+            width: 8px;
+            height: 8px;
+            background-color: var(--color-good);
+            border-radius: 50%;
+            animation: pulse 1.5s infinite;
+        }
+
+        /* Grid cards for Pollutants */
+        .grid-title {
+            font-family: 'Outfit', sans-serif;
+            font-size: 1.25rem;
+            font-weight: 600;
+            margin-bottom: 1rem;
+            color: var(--text-primary);
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .cards-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1.25rem;
+        }
+
+        .card {
+            background: var(--card-bg);
+            border: 1px solid var(--card-border);
+            backdrop-filter: blur(12px);
+            border-radius: 16px;
+            padding: 1.25rem;
+            display: flex;
+            flex-direction: column;
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+        }
+
+        .card:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 8px 30px rgba(0, 0, 0, 0.25);
+            border-color: rgba(255, 255, 255, 0.15);
+        }
+
+        .card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 0.75rem;
+        }
+
+        .card-title {
+            font-size: 0.85rem;
+            font-weight: 600;
+            color: var(--text-secondary);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .card-value {
+            font-family: 'Outfit', sans-serif;
+            font-size: 1.75rem;
+            font-weight: 600;
+            color: var(--text-primary);
+        }
+
+        .card-unit {
+            font-size: 0.8rem;
+            color: var(--text-secondary);
+            margin-left: 0.2rem;
+            font-weight: 400;
+        }
+
+        /* Flags & Context badge bar */
+        .flags-section {
+            background: rgba(15, 23, 42, 0.6);
+            border-radius: 16px;
+            padding: 1.25rem;
+            border: 1px solid var(--card-border);
+            display: flex;
+            flex-wrap: wrap;
+            gap: 1rem;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .flag-badge {
+            padding: 0.5rem 1rem;
+            border-radius: 30px;
+            font-size: 0.85rem;
+            font-weight: 500;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            color: var(--text-secondary);
+            transition: all 0.3s ease;
+        }
+
+        .flag-badge.active {
+            background: rgba(96, 165, 250, 0.1);
+            border-color: rgba(96, 165, 250, 0.3);
+            color: #60a5fa;
+            box-shadow: 0 0 10px rgba(96, 165, 250, 0.1);
+        }
+
+        .flag-badge.active.warning {
+            background: rgba(239, 68, 68, 0.1);
+            border-color: rgba(239, 68, 68, 0.3);
+            color: #ef4444;
+            box-shadow: 0 0 10px rgba(239, 68, 68, 0.1);
+        }
+
+        /* Buttons & Interactions */
+        .controls-row {
+            display: flex;
+            justify-content: center;
+            margin-top: 1rem;
+        }
+
+        .btn-refresh {
+            font-family: 'Outfit', sans-serif;
+            background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%);
+            color: white;
+            border: none;
+            padding: 0.85rem 2.25rem;
+            font-size: 1.05rem;
+            font-weight: 600;
+            border-radius: 30px;
+            cursor: pointer;
+            box-shadow: 0 4px 20px rgba(59, 130, 246, 0.3);
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .btn-refresh:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 25px rgba(59, 130, 246, 0.5);
+        }
+
+        .btn-refresh:active {
+            transform: translateY(0);
+        }
+
+        /* Loading Skeleton Screens */
+        .skeleton {
+            background: linear-gradient(90deg, rgba(255, 255, 255, 0.05) 25%, rgba(255, 255, 255, 0.1) 37%, rgba(255, 255, 255, 0.05) 63%);
+            background-size: 400% 100%;
+            animation: skeleton-loading 1.4s ease infinite;
+        }
+
+        /* Animations */
+        @keyframes pulse {
+            0% {
+                transform: scale(0.95);
+                box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.7);
+            }
+
+            70% {
+                transform: scale(1);
+                box-shadow: 0 0 0 8px rgba(16, 185, 129, 0);
+            }
+
+            100% {
+                transform: scale(0.95);
+                box-shadow: 0 0 0 0 rgba(16, 185, 129, 0);
+            }
+        }
+
+        @keyframes skeleton-loading {
+            0% {
+                background-position: 100% 50%;
+            }
+
+            100% {
+                background-position: 0% 50%;
+            }
+        }
+
+        @keyframes fadeInDown {
+            from {
+                opacity: 0;
+                transform: translateY(-20px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        @keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        /* Responsiveness */
+        @media(max-width: 768px) {
+            h1 {
+                font-size: 2rem;
+            }
+
+            .dashboard-container {
+                gap: 1.5rem;
+            }
+
+            .hero-section {
+                padding: 2rem 1rem;
+            }
+        }
+    </style>
+</head>
+
+<body>
+
+    <header>
+        <h1>Kolkata AQI Forecaster</h1>
+        <div class="subtitle">Deep Learning Temporal Model (CNN-ILSTM)</div>
+    </header>
+
+    <main class="dashboard-container">
+        <!-- Hero section with live Gauge -->
+        <section class="hero-section" id="hero-sec">
+            <div class="gauge-outer" id="gauge-outer">
+                <div class="gauge-inner">
+                    <div class="gauge-value" id="aqi-value">--</div>
+                    <div class="gauge-unit">Predicted AQI</div>
+                </div>
+            </div>
+            <h2 class="aqi-label" id="aqi-label">Fetching live prediction...</h2>
+            <p class="health-advice" id="health-advice">
+                Connecting to forecast engine. Checking current air pollution variables...
+            </p>
+            <div class="update-badge">
+                <div class="pulse-dot" id="pulse-dot"></div>
+                <span id="update-time">Last update: --:--</span>
+            </div>
+        </section>
+
+        <!-- Flags Section -->
+        <section class="flags-section">
+            <div class="flag-badge" id="flag-rush">Rush Hour</div>
+            <div class="flag-badge" id="flag-season">Monsoon</div>
+            <div class="flag-badge" id="flag-festival">Festival Season</div>
+            <div class="flag-badge" id="flag-burning">Crop Burning Season</div>
+        </section>
+
+        <!-- Pollutant Cards Grid -->
+        <section>
+            <h3 class="grid-title">Live Environmental Parameters</h3>
+            <div class="cards-grid">
+                <div class="card">
+                    <div class="card-header">
+                        <span class="card-title">PM2.5</span>
+                    </div>
+                    <div class="card-value"><span id="val-pm25">--</span><span class="card-unit">µg/m³</span></div>
+                </div>
+                <div class="card">
+                    <div class="card-header">
+                        <span class="card-title">PM10</span>
+                    </div>
+                    <div class="card-value"><span id="val-pm10">--</span><span class="card-unit">µg/m³</span></div>
+                </div>
+                <div class="card">
+                    <div class="card-header">
+                        <span class="card-title">Nitrogen Dioxide (NO₂)</span>
+                    </div>
+                    <div class="card-value"><span id="val-no2">--</span><span class="card-unit">µg/m³</span></div>
+                </div>
+                <div class="card">
+                    <div class="card-header">
+                        <span class="card-title">Carbon Monoxide (CO)</span>
+                    </div>
+                    <div class="card-value"><span id="val-co">--</span><span class="card-unit">mg/m³</span></div>
+                </div>
+                <div class="card">
+                    <div class="card-header">
+                        <span class="card-title">Sulphur Dioxide (SO₂)</span>
+                    </div>
+                    <div class="card-value"><span id="val-so2">--</span><span class="card-unit">µg/m³</span></div>
+                </div>
+                <div class="card">
+                    <div class="card-header">
+                        <span class="card-title">Ozone (O₃)</span>
+                    </div>
+                    <div class="card-value"><span id="val-o3">--</span><span class="card-unit">µg/m³</span></div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Weather Cards Grid -->
+        <section>
+            <h3 class="grid-title">Meteorological Inputs</h3>
+            <div class="cards-grid">
+                <div class="card">
+                    <div class="card-header">
+                        <span class="card-title">Temperature</span>
+                    </div>
+                    <div class="card-value"><span id="val-temp">--</span><span class="card-unit">°C</span></div>
+                </div>
+                <div class="card">
+                    <div class="card-header">
+                        <span class="card-title">Humidity</span>
+                    </div>
+                    <div class="card-value"><span id="val-rh">--</span><span class="card-unit">%</span></div>
+                </div>
+                <div class="card">
+                    <div class="card-header">
+                        <span class="card-title">Wind Speed</span>
+                    </div>
+                    <div class="card-value"><span id="val-wind">--</span><span class="card-unit">m/s</span></div>
+                </div>
+                <div class="card">
+                    <div class="card-header">
+                        <span class="card-title">Rainfall</span>
+                    </div>
+                    <div class="card-value"><span id="val-rain">--</span><span class="card-unit">mm</span></div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Fetch live controls -->
+        <div class="controls-row">
+            <button class="btn-refresh" id="btn-refresh" onclick="fetchLiveForecast()">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"
+                    stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.67" />
+                </svg>
+                Refresh Live Forecast
+            </button>
+        </div>
+    </main>
+
+    <script>
+        const API_BASE = "https://khush-thakkar-09-kolkata-aqi-forecaster.hf.space";
+
+        function getAqiRating(aqi) {
+            if (aqi <= 50) {
+                return {
+                    label: "Good",
+                    advice: "Air quality is satisfactory, and air pollution poses little or no risk. Perfect day for outdoor exercises!",
+                    color: "#10b981"
+                };
+            } else if (aqi <= 100) {
+                return {
+                    label: "Moderate",
+                    advice: "Air quality is acceptable. However, there may be a risk for some people, particularly those who are unusually sensitive to air pollution.",
+                    color: "#f59e0b"
+                };
+            } else {
+                return {
+                    label: "Poor / Unhealthy",
+                    advice: "Everyone may begin to experience health effects; members of sensitive groups may experience more serious health effects. Consider wearing masks and limiting prolonged outdoor exposure.",
+                    color: "#ef4444"
+                };
+            }
+        }
+
+        async function fetchLiveForecast() {
+            const btn = document.getElementById('btn-refresh');
+            const label = document.getElementById('aqi-label');
+            const advice = document.getElementById('health-advice');
+            const valAqi = document.getElementById('aqi-value');
+            const updateTime = document.getElementById('update-time');
+            const pulseDot = document.getElementById('pulse-dot');
+            const gauge = document.getElementById('gauge-outer');
+
+            btn.disabled = true;
+            btn.style.opacity = '0.6';
+            label.textContent = "Loading live Open-Meteo data...";
+            pulseDot.style.backgroundColor = '#60a5fa';
+
+            try {
+                const response = await fetch(`${API_BASE}/predict-live`);
+                if (!response.ok) throw new Error("Failed to fetch live API prediction");
+
+                const data = await response.json();
+
+                // 1. Update AQI Value and Rating
+                const aqi = data.predicted_aqi;
+                valAqi.textContent = aqi.toFixed(1);
+
+                const rating = getAqiRating(aqi);
+                label.textContent = rating.label;
+                label.style.color = rating.color;
+                advice.textContent = rating.advice;
+
+                // Update CSS variables for Dynamic Glow
+                document.documentElement.style.setProperty('--aqi-glow', rating.color);
+
+                // Update ring percentage fill (cap at 100% relative to 150 AQI limit for representation)
+                const percent = Math.min((aqi / 150) * 100, 100);
+                document.documentElement.style.setProperty('--aqi-percent', `${percent}%`);
+                pulseDot.style.backgroundColor = rating.color;
+
+                // 2. Update Pollutants
+                const raw = data.raw_data;
+                document.getElementById('val-pm25').textContent = raw.pm25.toFixed(1);
+                document.getElementById('val-pm10').textContent = raw.pm10.toFixed(1);
+                document.getElementById('val-no2').textContent = raw.no2.toFixed(1);
+                document.getElementById('val-co').textContent = raw.co.toFixed(3);
+                document.getElementById('val-so2').textContent = raw.so2.toFixed(1);
+                document.getElementById('val-o3').textContent = raw.o3.toFixed(1);
+
+                // 3. Update Weather
+                document.getElementById('val-temp').textContent = raw.temp.toFixed(1);
+                document.getElementById('val-rh').textContent = raw.rh.toFixed(0);
+                document.getElementById('val-wind').textContent = raw.wind.toFixed(1);
+                document.getElementById('val-rain').textContent = raw.rain.toFixed(1);
+
+                // 4. Update Flag badges
+                updateFlag('flag-rush', raw.rush_hour_flag, "Rush Hour Active");
+                updateFlag('flag-festival', raw.festival_flag, "Festival Day", true);
+                updateFlag('flag-burning', raw.crop_burning_flag, "Stubble Burning Season", true);
+
+                // Season conversion
+                const seasons = ["Winter", "Summer", "Monsoon", "Post-Monsoon"];
+                const seasonStr = seasons[raw.season_flag] || "Unknown";
+                const seasonBadge = document.getElementById('flag-season');
+                seasonBadge.textContent = seasonStr;
+                seasonBadge.classList.add('active');
+
+                // 5. Update timestamp
+                updateTime.textContent = `Last update: ${raw.time}`;
+
+            } catch (err) {
+                console.error(err);
+                label.textContent = "Forecast Engine Error";
+                label.style.color = "var(--color-poor)";
+                advice.textContent = "Failed to communicate with the prediction model. Please ensure the API is running correctly.";
+                pulseDot.style.backgroundColor = "var(--color-poor)";
+            } finally {
+                btn.disabled = false;
+                btn.style.opacity = '1';
+            }
+        }
+
+        function updateFlag(elementId, activeStatus, labelText, isWarning = false) {
+            const badge = document.getElementById(elementId);
+            badge.textContent = labelText;
+            if (activeStatus === 1) {
+                badge.classList.add('active');
+                if (isWarning) badge.classList.add('warning');
+            } else {
+                badge.classList.remove('active');
+                badge.classList.remove('warning');
+            }
+        }
+
+        // Run once on load
+        window.addEventListener('load', fetchLiveForecast);
+    </script>
+</body>
+
+</html>
