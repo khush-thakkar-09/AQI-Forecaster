@@ -1,7 +1,7 @@
 import requests
 import pandas as pd
 import numpy as np
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 
 LAT, LON = 22.5626, 88.3630
 
@@ -48,7 +48,9 @@ def run_pipeline(scaler):
     1. A list of lists of shape (23, 19) containing the scaled features.
     2. A dictionary of the latest raw (unscaled) readings for UI display.
     """
-    now = datetime.now()
+    # Shift naive UTC time to Asia/Kolkata (UTC + 5:30) to align with Open-Meteo and Kolkata local time
+    utc_now = datetime.now(timezone.utc).replace(tzinfo=None)
+    now = utc_now + timedelta(hours=5, minutes=30)
     start = now - timedelta(hours=23)
     start_date = start.strftime("%Y-%m-%d")
     end_date = now.strftime("%Y-%m-%d")

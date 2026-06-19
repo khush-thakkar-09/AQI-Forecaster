@@ -523,7 +523,9 @@
     </main>
 
     <script>
-        const API_BASE = "https://khush-thakkar-09-kolkata-aqi-forecaster.hf.space";
+        const API_BASE = window.location.origin.includes("localhost") || window.location.origin.includes("127.0.0.1")
+            ? "http://127.0.0.1:8000"
+            : (window.location.origin.includes("hf.space") ? window.location.origin : "https://khush-thakkar-09-kolkata-aqi-forecaster.hf.space");
 
         function getAqiRating(aqi) {
             if (aqi <= 50) {
