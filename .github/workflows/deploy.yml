@@ -27,7 +27,7 @@ jobs:
           # 2. Create a clean orphan branch containing only runtime files to bypass the 10MB limit
           git checkout --orphan hf-deploy
           git reset
-          git add Dockerfile requirements.txt live_app.py pipeline.py model.py model_3.keras scaler.pkl
+          git add Dockerfile requirements.txt live_app.py pipeline.py model.py model_3.keras scaler.pkl README.md
           git commit -m "Deploy to Hugging Face Space"
           
           # 3. Add Hugging Face Space as remote and force push the hf-deploy branch to HF's main
